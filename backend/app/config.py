@@ -22,6 +22,7 @@ class Settings(BaseSettings):
     
     # LLM
     gemini_api_key: str = Field(default="")
+    groq_api_key: str = Field(default="")
     llm_provider: str = Field(default="gemini")
     llm_model: str = Field(default="gemini-2.0-flash")
     

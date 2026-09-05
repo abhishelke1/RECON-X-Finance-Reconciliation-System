@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { 
   CheckCircle2, AlertTriangle, ArrowUpRight, TrendingUp, ShieldCheck, 
-  RefreshCw, Play, BarChart3, Database, Layers, BrainCircuit 
+  RefreshCw, Play, BarChart3, Database, Layers, BrainCircuit, Sparkles 
 } from 'lucide-react';
 import api from '../api';
 
@@ -11,10 +11,26 @@ export default function Overview() {
   const [merchants, setMerchants] = useState<any[]>([]);
   const [recentRuns, setRecentRuns] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [seeding, setSeeding] = useState(false);
+  const [seedMessage, setSeedMessage] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
   }, []);
+
+  const handleSeedTrial = async () => {
+    setSeeding(true);
+    setSeedMessage(null);
+    try {
+      const res = await api.post('/demo/seed-trial');
+      setSeedMessage(`Successfully seeded ${res.data.merchant_name}: ${res.data.total_records} records reconciled!`);
+      await loadData();
+    } catch (e: any) {
+      alert(`Seeding failed: ${e.response?.data?.detail || e.message}`);
+    } finally {
+      setSeeding(false);
+    }
+  };
 
   const loadData = async () => {
     setLoading(true);
@@ -58,7 +74,16 @@ export default function Overview() {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            onClick={handleSeedTrial}
+            disabled={seeding}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-gradient-to-r from-amber-500 to-amber-400 hover:from-amber-400 hover:to-amber-300 disabled:opacity-50 text-slate-950 font-bold transition-all shadow-lg shadow-amber-500/20"
+            title="Seed real-world enterprise dataset with 8 spotlight scenarios for judges"
+          >
+            <Sparkles className={`w-4 h-4 text-slate-950 ${seeding ? 'animate-spin' : ''}`} />
+            {seeding ? 'Seeding Trial Data...' : '⚡ Seed Pro Trial Data'}
+          </button>
           <Link
             to="/demo"
             className="flex items-center gap-2 px-4 py-2.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold transition-all shadow-lg shadow-emerald-500/20"
@@ -75,6 +100,19 @@ export default function Overview() {
           </Link>
         </div>
       </div>
+
+      {/* Seed Message Alert */}
+      {seedMessage && (
+        <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-sm font-semibold flex items-center justify-between shadow-lg">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-5 h-5" />
+            <span>{seedMessage}</span>
+          </div>
+          <button onClick={() => setSeedMessage(null)} className="text-xs text-slate-400 hover:text-white">
+            Dismiss
+          </button>
+        </div>
+      )}
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">

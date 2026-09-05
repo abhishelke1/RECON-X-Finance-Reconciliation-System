@@ -10,9 +10,11 @@ from app.api.v1.reconciliation_routes import router as reconciliation_router
 from app.api.v1.exception_routes import router as exception_router
 from app.api.v1.audit_routes import router as audit_router
 from app.api.v1.evaluation_routes import router as evaluation_router
+from app.api.v1.demo_routes import router as demo_router
 
 router.include_router(import_router, tags=["import"])
 router.include_router(reconciliation_router, tags=["reconciliation"])
 router.include_router(exception_router, tags=["exceptions"])
 router.include_router(audit_router, tags=["audit"])
 router.include_router(evaluation_router, tags=["evaluation"])
+router.include_router(demo_router, tags=["demo"])

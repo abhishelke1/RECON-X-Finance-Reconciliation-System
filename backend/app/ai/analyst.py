@@ -35,10 +35,16 @@ class AIAnalyst:
         """
         ground_truth_entities = EvidenceCollector.extract_ground_truth_entities(evidence_graph)
 
+        provider = (self.settings.llm_provider or "gemini").lower()
+        groq_key = self.settings.groq_api_key.strip() if self.settings.groq_api_key else ""
+        gemini_key = self.settings.gemini_api_key.strip() if self.settings.gemini_api_key else ""
+
         # Check for API Key
-        api_key = self.settings.gemini_api_key.strip() if self.settings.gemini_api_key else ""
-        if not api_key:
-            logger.info("No GEMINI_API_KEY configured; executing deterministic fallback analysis.")
+        use_groq = provider == "groq" or (groq_key and not gemini_key)
+        active_key = groq_key if use_groq else gemini_key
+
+        if not active_key:
+            logger.info("No LLM API key configured; executing deterministic fallback analysis.")
             return self.fallback.analyze(
                 exception_type=exception.exception_type,
                 amount_involved=exception.amount_involved,
@@ -59,22 +65,44 @@ class AIAnalyst:
         )
 
         try:
-            import google.generativeai as genai
+            if use_groq:
+                import httpx
+                model_name = self.settings.llm_model if (provider == "groq" and self.settings.llm_model != "gemini-2.0-flash") else "openai/gpt-oss-120b"
+                headers = {
+                    "Authorization": f"Bearer {active_key}",
+                    "Content-Type": "application/json",
+                }
+                payload = {
+                    "model": model_name,
+                    "messages": [
+                        {"role": "system", "content": SYSTEM_PROMPT},
+                        {"role": "user", "content": prompt},
+                    ],
+                    "response_format": {"type": "json_object"},
+                    "temperature": 0.1,
+                }
+                async with httpx.AsyncClient(timeout=15.0) as client:
+                    resp = await client.post("https://api.groq.com/openai/v1/chat/completions", headers=headers, json=payload)
+                    resp.raise_for_status()
+                    data = resp.json()
+                    raw_json = data["choices"][0]["message"]["content"]
+            else:
+                import google.generativeai as genai
 
-            genai.configure(api_key=api_key)
-            model = genai.GenerativeModel(
-                model_name=self.settings.llm_model,
-                system_instruction=SYSTEM_PROMPT,
-                generation_config={"temperature": 0.1, "response_mime_type": "application/json"},
-            )
+                genai.configure(api_key=active_key)
+                model = genai.GenerativeModel(
+                    model_name=self.settings.llm_model,
+                    system_instruction=SYSTEM_PROMPT,
+                    generation_config={"temperature": 0.1, "response_mime_type": "application/json"},
+                )
 
-            # Run with 10s timeout
-            response = await asyncio.wait_for(
-                asyncio.to_thread(model.generate_content, prompt),
-                timeout=10.0,
-            )
+                # Run with 10s timeout
+                response = await asyncio.wait_for(
+                    asyncio.to_thread(model.generate_content, prompt),
+                    timeout=10.0,
+                )
+                raw_json = response.text
 
-            raw_json = response.text
             validated_result = self.validator.validate_and_sanitize(raw_json, ground_truth_entities)
             return validated_result
 

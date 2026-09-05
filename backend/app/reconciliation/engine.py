@@ -125,6 +125,10 @@ class ReconciliationEngine:
         unmatched_count = 0
         exceptions_count = 0
 
+        all_matches = []
+        all_exceptions = []
+        all_evidence = []
+
         # 3. Process matches, calculate variances, classify and generate exceptions
         for sm in scored_matches:
             pay = payment_map.get(sm.payment_id) if sm.payment_id else None
@@ -173,7 +177,7 @@ class ReconciliationEngine:
                 variance=calc.variance,
                 recon_status=recon_status.value,
             )
-            db.add(db_match)
+            all_matches.append(db_match)
 
             if sm.match_status == MatchStatus.UNMATCHED:
                 unmatched_count += 1
@@ -197,9 +201,23 @@ class ReconciliationEngine:
                     chargeback=cbk,
                     ledger_entry=ledg,
                 )
-                db.add(exc)
-                for ev in evidence_items:
-                    db.add(ev)
+                all_exceptions.append(exc)
+                all_evidence.extend(evidence_items)
+
+        # Stage 1: Flush all reconciliation matches (depends only on run)
+        for m in all_matches:
+            db.add(m)
+        await db.flush()
+
+        # Stage 2: Flush all exceptions (depends on run and matches)
+        for e in all_exceptions:
+            db.add(e)
+        await db.flush()
+
+        # Stage 3: Flush all evidence items (depends on exceptions)
+        for ev in all_evidence:
+            db.add(ev)
+        await db.flush()
 
         # 4. Finalize run stats
         end_time = time.perf_counter()
