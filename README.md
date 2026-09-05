@@ -110,31 +110,53 @@ Built into the frontend UI (`/demo`) and terminal CLI (`python scripts/run_demo.
 
 ## 🛠️ Quick Start
 
-### 1. Run All Tests (78/78 Passing)
+### 🐳 Option A: Run with Docker (Recommended for Judges & Evaluators)
+
+The entire application (PostgreSQL 16, FastAPI Backend, and Nginx React Frontend) can be launched with a **single command** directly after cloning, without needing manual configuration:
+
+```bash
+docker compose up --build
+```
+*(or `docker-compose up --build`)*
+
+**Access Services:**
+- 🌐 **Web Dashboard UI**: [`http://localhost:3000`](http://localhost:3000)
+- 📑 **FastAPI Swagger Docs**: [`http://localhost:8000/docs`](http://localhost:8000/docs)
+- 🩺 **Health Endpoint**: [`http://localhost:8000/api/v1/health`](http://localhost:8000/api/v1/health)
+- 🗄️ **PostgreSQL 16**: `localhost:5432` (User: `recon`, DB: `reconx`)
+
+> **Note**: Zero configuration is required. The system works immediately out of the box with embedded defaults and automatically initializes all 15 database tables on boot. To shut down: `docker compose down`.
+
+---
+
+### 💻 Option B: Run Locally (Without Docker)
+
+#### 1. Run All Tests (78/78 Passing)
 ```bash
 cd backend
 python -m pytest tests/ -v
 ```
 
-### 2. Run Terminal End-to-End Demo Script
+#### 2. Run Terminal End-to-End Demo Script
+Executes 5,000 synthetic transaction ingestion, 4-tier matching, AI investigation, policy guardrail enforcement, and empirical baseline benchmarking:
 ```bash
 python scripts/run_demo.py
 ```
 
-### 3. Run Backend API
+#### 3. Start Backend API
 ```bash
 cd backend
 uvicorn app.main:app --reload --port 8000
 ```
-Interactive Swagger docs: `http://localhost:8000/docs`
+Interactive Swagger docs: [`http://localhost:8000/docs`](http://localhost:8000/docs)
 
-### 4. Run Frontend Dashboard
+#### 4. Start Frontend Dashboard
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
-Open browser at: `http://localhost:5173`
+Open browser at: [`http://localhost:5173`](http://localhost:5173)
 
 ---
 

@@ -9,3 +9,5 @@ venv
 htmlcov
 .git
 .gitignore
+*.db
+*.sqlite

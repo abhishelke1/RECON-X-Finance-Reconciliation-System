@@ -12,6 +12,9 @@ from fastapi.responses import JSONResponse
 from app.api.v1 import router as api_v1_router
 from app.config import get_settings
 
+from app.database import get_async_engine
+from app.models.base import Base
+
 settings = get_settings()
 logger = structlog.get_logger(__name__)
 
@@ -19,6 +22,13 @@ logger = structlog.get_logger(__name__)
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     """Lifespan context manager for application startup and shutdown."""
     await logger.ainfo("Starting up RECON-X application")
+    try:
+        engine = get_async_engine()
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+        await logger.ainfo("Database tables verified/created successfully")
+    except Exception as e:
+        await logger.aerror("Database initialization failed", error=str(e))
     yield
     await logger.ainfo("Shutting down RECON-X application")
 
